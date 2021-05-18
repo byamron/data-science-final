@@ -146,3 +146,7 @@ total.joined <- crime.joined %>%
                                 "men_total",
                                 "women_total",
                                 "Total"))
+#this is the code for state and public colleges in the US
+state.colleges.fixed <- read.csv("colleges.edit.csv") 
+state.colleges.fixed2 <-as.data.frame(str_replace_all(string = state.colleges.fixed$div.location," \\s*\\([^\\)]+\\)", ""))
+
