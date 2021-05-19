@@ -1,12 +1,3 @@
-#this is a test commit
-#hi ben
-#hi ben
-#hi ben
-#hi ben
-#hi ben
-
-#whatsup
-
 library(tidyverse)
 library(rvest)
 library(pdftools)
@@ -176,12 +167,10 @@ state.schools.total.joined <- total.joined %>%
 state.schools.total.not.joined <- state.colleges.fixed2 %>%
   anti_join(total.joined, by = "INSTNM")
 
-list.of.desired.schools <- str_c(state.colleges.fixed2$INSTNM, sep = "|", collapse = TRUE)
+list.of.desired.schools <- str_c(state.colleges.fixed2$INSTNM, collapse = "|")
 
 total.joined %>%
   sample_n(10) %>%
   filter(str_detect(INSTNM, list.of.desired.schools))
-
-str_detect(total.joined, %in% state.colleges.fixed2$INSTNM)
 
 
