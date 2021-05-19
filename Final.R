@@ -154,15 +154,8 @@ colnames(total.joined) <- str_replace_all(colnames(total.joined),"y", "ON")
 ##later: can rename res hall columns but for now have no suffix 
 #colnames(total.joined) <- str_c(colnames(total.joined), c("6 ", "7 ", "8 "), ".RES")
 
-names(total.joined)[13] <- "RAPE16.OFF"
-names(total.joined)[14] <- "FONDL16.OFF"
-names
 
-
-#this is the code for state and public colleges in the US
-state.colleges.fixed <- read_csv("colleges.edit.csv") 
-state.colleges.fixed2 <- as.data.frame(str_replace_all(string = state.colleges.fixed$div.location," \\s*\\([^\\)]+\\)", ""))
-
+#this is the code for refined state and public colleges list 
 state.schools <- read_csv("colleges.edit copy.csv")
 names(state.schools)[1] <- "INSTNM"
 
