@@ -1,3 +1,10 @@
+#this is a test commit
+#hi ben
+#hi ben
+#hi ben
+
+#whatsup
+
 library(tidyverse)
 library(rvest)
 library(pdftools)
@@ -141,18 +148,6 @@ total.joined <- crime.joined %>%
                                 "Total"))
 
 
-oncampus.crime %>%
-  select(-c(MURD16, NEG_M16, INCES16)) %>%
-  view()
-
-noncampus.crime %>%
-  select(-c(MURD16, NEG_M16, INCES16)) %>%
-  view()
-
-reshall.crime %>%
-  select(-c(MURD16, NEG_M16, INCES16)) %>%
-  view()
-
 
 #this is the code for state and public colleges in the US
 state.colleges.fixed <- read.csv("colleges.edit.csv") 
@@ -166,11 +161,4 @@ state.schools.total.joined <- total.joined %>%
 
 state.schools.total.not.joined <- state.colleges.fixed2 %>%
   anti_join(total.joined, by = "INSTNM")
-
-list.of.desired.schools <- str_c(state.colleges.fixed2$INSTNM, collapse = "|")
-
-total.joined %>%
-  sample_n(10) %>%
-  filter(str_detect(INSTNM, list.of.desired.schools))
-
 
