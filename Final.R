@@ -146,7 +146,19 @@ total.joined <- crime.joined %>%
                                 "men_total",
                                 "women_total",
                                 "Total"))
+
+
+
 #this is the code for state and public colleges in the US
 state.colleges.fixed <- read.csv("colleges.edit.csv") 
-state.colleges.fixed2 <-as.data.frame(str_replace_all(string = state.colleges.fixed$div.location," \\s*\\([^\\)]+\\)", ""))
+state.colleges.fixed2 <- as.data.frame(str_replace_all(string = state.colleges.fixed$div.location," \\s*\\([^\\)]+\\)", ""))
+
+names(state.colleges.fixed2)[1] <- "INSTNM"
+
+state.schools.total.joined <- total.joined %>%
+  inner_join(state.colleges.fixed2, by = "INSTNM") %>%
+
+
+state.schools.total.not.joined <- state.colleges.fixed2 %>%
+  anti_join(total.joined, by = "INSTNM")
 
