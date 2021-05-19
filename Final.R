@@ -14,6 +14,7 @@ library(tidytext)
 library(tidyr)
 library(reshape2)
 library(lubridate)
+library(geojsonio)
 
 noncampus.crime <- read_csv("noncampuscrime161718.csv")
 noncampus.vawa <- read_csv("noncampusvawa161718.csv")
@@ -161,4 +162,8 @@ state.schools.total.joined <- total.joined %>%
 
 state.schools.total.not.joined <- state.colleges.fixed2 %>%
   anti_join(total.joined, by = "INSTNM")
+
+#read in geojson file
+college.shapes <- geojson_read("Colleges_and_Universities.geojson",
+             what = "sp")
 
