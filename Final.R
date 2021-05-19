@@ -145,20 +145,66 @@ total.joined <- crime.joined %>%
                                 "Sector_desc",
                                 "men_total",
                                 "women_total",
-                                "Total"))
+                                "Total")) 
+   
 
+colnames(total.joined) <- str_replace_all(colnames(total.joined),"x", "OFF")
+colnames(total.joined) <- str_replace_all(colnames(total.joined),"y", "ON")
+
+##later: can rename res hall columns but for now have no suffix 
+#colnames(total.joined) <- str_c(colnames(total.joined), c("6 ", "7 ", "8 "), ".RES")
+
+names(total.joined)[13] <- "RAPE16.OFF"
+names(total.joined)[14] <- "FONDL16.OFF"
+names
 
 
 #this is the code for state and public colleges in the US
-state.colleges.fixed <- read.csv("colleges.edit.csv") 
+state.colleges.fixed <- read_csv("colleges.edit.csv") 
 state.colleges.fixed2 <- as.data.frame(str_replace_all(string = state.colleges.fixed$div.location," \\s*\\([^\\)]+\\)", ""))
 
-names(state.colleges.fixed2)[1] <- "INSTNM"
+state.schools <- read_csv("colleges.edit copy.csv")
+names(state.schools)[1] <- "INSTNM"
 
+
+nescacs <- tibble(school = c("Middlebury College", 
+                             "Amherst College", 
+                             "Bates College", 
+                             "Bowdoin College", 
+                             "Hamilton College", 
+                             "Connecticut College", 
+                             "Tufts University",
+                             "Trinity College", 
+                             "Williams College",
+                             "Colby College"))
+
+names(nescacs)[1] <- "INSTNM"
+
+#schools that're missing
+state.schools.total.not.joined <- state.schools %>%
+  anti_join(total.joined, by = "INSTNM") 
+
+#most of the state schools 
 state.schools.total.joined <- total.joined %>%
-  inner_join(state.colleges.fixed2, by = "INSTNM") %>%
+  inner_join(state.schools, by = "INSTNM") 
+  
+nescacs.data <- total.joined %>%
+  inner_join(nescacs, by = "INSTNM")
+
+nescac.and.state.data <- state.schools.total.joined %>%
+  full_join(nescacs.data, by = c("UNITID_P",
+                                 "INSTNM",
+                                 "BRANCH",
+                                 "Address",
+                                 "City",
+                                 "State",
+                                 "ZIP",
+                                 "sector_cd",
+                                 "Sector_desc",
+                                 "men_total",
+                                 "women_total",
+                                 "Total"))
 
 
-state.schools.total.not.joined <- state.colleges.fixed2 %>%
-  anti_join(total.joined, by = "INSTNM")
+
 
