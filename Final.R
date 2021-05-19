@@ -150,6 +150,18 @@ total.joined <- crime.joined %>%
                                 "Total"))
 
 
+oncampus.crime %>%
+  select(-c(MURD16, NEG_M16, INCES16)) %>%
+  view()
+
+noncampus.crime %>%
+  select(-c(MURD16, NEG_M16, INCES16)) %>%
+  view()
+
+reshall.crime %>%
+  select(-c(MURD16, NEG_M16, INCES16)) %>%
+  view()
+
 
 #this is the code for state and public colleges in the US
 state.colleges.fixed <- read.csv("colleges.edit.csv") 
