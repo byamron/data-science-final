@@ -5,6 +5,11 @@
 
 #whatsup
 
+install.packages("rgdal")
+install.packages("spdplyr")
+install.packages("geojsonio")
+install.packages("rmapshaper")
+
 library(tidyverse)
 library(rvest)
 library(pdftools)
@@ -14,6 +19,7 @@ library(tidytext)
 library(tidyr)
 library(reshape2)
 library(lubridate)
+
 
 noncampus.crime <- read_csv("noncampuscrime161718.csv")
 noncampus.vawa <- read_csv("noncampusvawa161718.csv")
@@ -198,6 +204,21 @@ nescac.and.state.data <- state.schools.total.joined %>%
                                  "women_total",
                                  "Total"))
 
+
+top.200.url <- "https://www.4icu.org/top-universities-north-america/"
+top.200.colleges <- top.200.url %>%
+  read_html() %>%
+  html_node("table") %>%
+  html_table()
+
+#see what schools this leaves out from the top 200
+top200.leftout <- top.200.colleges %>%
+  anti_join(total.joined, by = c("University" = "INSTNM")) 
+#84 schools from this top 200 list have different syntax than the OG list
+
+
+top200.included <- total.joined %>%
+  inner_join(top.200.colleges, by = c("INSTNM" = "University"))
 
 
 
