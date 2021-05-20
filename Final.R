@@ -167,3 +167,16 @@ state.schools.total.not.joined <- state.colleges.fixed2 %>%
 college.shapes <- geojson_read("Colleges_and_Universities.geojson",
              what = "sp")
 
+
+## read in usnews data
+usnews.url <- "https://www.usnews.com/best-colleges/rankings/national-universities/top-public"
+
+usnews.url %>%
+  read_html() %>%
+  html_nodes("h3") %>%
+  html_text()
+
+
+
+
+
