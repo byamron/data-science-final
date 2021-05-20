@@ -1,5 +1,3 @@
-
-
 library(tidyverse)
 library(rvest)
 library(pdftools)
