@@ -146,7 +146,8 @@ total.joined <- crime.joined %>%
                                 "Sector_desc",
                                 "men_total",
                                 "women_total",
-                                "Total"))
+                                "Total")) %>%
+  filter(Sector_desc %in% c("Public, 4-year or above", "Private nonprofit, 4-year or above"))
 
 
 
@@ -175,8 +176,4 @@ usnews.url %>%
   read_html() %>%
   html_nodes("h3") %>%
   html_text()
-
-
-
-
 
