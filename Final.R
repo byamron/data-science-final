@@ -8,6 +8,7 @@ library(tidyr)
 library(reshape2)
 library(lubridate)
 library(geojsonio)
+library(leaflet)
 
 #read in data
 noncampus.crime <- read_csv("noncampuscrime161718.csv")
@@ -184,5 +185,11 @@ total.joined.replaced.na %>%
 college.shapes <- geojson_read("Colleges_and_Universities.geojson",
              what = "sp")
 
+college.shapes %>%
+  leaflet() %>%
+  addTiles %>%
+  addMarkers()
+ 
+  
 
 
