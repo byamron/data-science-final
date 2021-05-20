@@ -158,25 +158,29 @@ total.joined.replaced.na[is.na(total.joined.replaced.na)] = 0
 
 total.joined.replaced.na %>%
   group_by(INSTNM) %>%
-  summarize(total.rape = RAPE16 + RAPE16.OFF + RAPE16.ON + 
-              RAPE17 + RAPE17.OFF + RAPE17.ON +
-              RAPE18 + RAPE18.OFF + RAPE18.ON,
-            total.statr = STATR16 + STATR16.OFF + STATR16.ON + 
-              STATR17 + STATR17.OFF + STATR17.ON +
-              STATR18 + STATR18.OFF + STATR18.ON,
-            total.fondl = FONDL16 + FONDL16.OFF + FONDL16.ON + 
-              FONDL17 + FONDL17.OFF + FONDL17.ON +
-              FONDL18 + FONDL18.OFF + FONDL18.ON,
-            total.vawa = DOMEST16 + DOMEST16.OFF + DOMEST16.ON +
-              DOMEST17 + DOMEST17.OFF + DOMEST17.ON +
-              DOMEST18 + DOMEST18.OFF + DOMEST18.ON +
-              DATING16 + DATING16.OFF + DATING16.ON +
-              DATING17 + DATING17.OFF + DATING17.ON +
-              DATING18 + DATING18.OFF + DATING18.ON +
-              STALK16 + STALK16.OFF + STALK16.ON +
-              STALK17 + STALK17.OFF + STALK17.ON +
-              STALK18 + STALK18.OFF + STALK18.ON) %>%
+  summarize(total.rape = sum(RAPE16,RAPE16.OFF, RAPE16.ON,
+              RAPE17 , RAPE17.OFF, RAPE17.ON,
+              RAPE18,RAPE18.OFF,RAPE18.ON),
+            total.statr = sum(STATR16,STATR16.OFF,STATR16.ON,
+              STATR17,STATR17.OFF,STATR17.ON ,
+              STATR18,STATR18.OFF,STATR18.ON),
+            total.fondl = sum(FONDL16 ,FONDL16.OFF ,FONDL16.ON , 
+              FONDL17,FONDL17.OFF ,FONDL17.ON ,
+              FONDL18 ,FONDL18.OFF ,FONDL18.ON),
+            total.vawa = sum(DOMEST16 ,DOMEST16.OFF , DOMEST16.ON ,
+              DOMEST17, DOMEST17.OFF,DOMEST17.ON,
+              DOMEST18,DOMEST18.OFF,DOMEST18.ON,
+              DATING16, DATING16.OFF, DATING16.ON,
+              DATING17,DATING17.OFF,DATING17.ON,
+              DATING18,DATING18.OFF,DATING18.ON,
+              STALK16,STALK16.OFF,STALK16.ON,
+              STALK17,STALK17.OFF,STALK17.ON,
+              STALK18, STALK18.OFF,STALK18.ON),
+            Total.pop = mean(Total),
+            men_total = mean(men_total),
+            women_total = mean(women_total)) %>%
   view()
+
 
 #read in geojson file
 college.shapes <- geojson_read("Colleges_and_Universities.geojson",
