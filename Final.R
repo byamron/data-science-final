@@ -187,41 +187,85 @@ total.metrics <- total.joined.replaced.na %>%
             rate.fondl = (total.fondl/Total.pop)*100,
             rate.vawa = (total.vawa/Total.pop)*100)
 
+#add type of school back to total metrics df
+school.type <- total.joined.replaced.na %>%
+  select(INSTNM, Sector_desc)
+
+metrics.full <- total.metrics %>%
+  inner_join(school.type, by = "INSTNM") %>%
+  unique()
 
 #new code 5/20/21
 
 #reading in shape file 
-colleges.points.shape <- st_read("Colleges_and_Universities.shp")
-colleges.transform <- st_transform(colleges.points.shape, CRS("+proj=longlat +datum=WGS84 +no_defs"))
+#colleges.points.shape <- st_read("Colleges_and_Universities.shp")
+#colleges.transform <- st_transform(colleges.points.shape, CRS("+proj=longlat +datum=WGS84 +no_defs"))
 
-colleges.transform %>%
-  leaflet() %>%
-  addTiles() %>%
-  addMarkers()
+#colleges.transform %>%
+#  leaflet() %>%
+#  addTiles() %>%
+#  addMarkers()
 
 #Trying to graph a leaflet is soooo slow, so we are going to try to use ggplot
-ggplot() + 
-  geom_sf(data = colleges.points.shape, size = 1, color = "black", fill = "cyan1") + 
-  coord_sf()
+#ggplot() + 
+#  geom_sf(data = colleges.points.shape, size = 1, color = "black", fill = "cyan1") + 
+#  coord_sf()
 
 
 #read in geojson file
-college.shapes <- geojson_read("Colleges_and_Universities.geojson",
-             what = "sp")
+#college.shapes <- geojson_read("Colleges_and_Universities.geojson",
+#             what = "sp")
 
-colleges.shapes.copy <- college.shapes
-colleges.shapes.copy@data <- college.shapes@data %>% filter(NAME == "MIDDLEBURY COLLEGE")
-
-
-colleges.shapes.copy %>%
-  leaflet() %>%
-  addTiles() %>%
-  addMarkers()
-
-
-college.shapes %>%
-  leaflet() %>%
-  addTiles() %>%
-  addMarkers()
+#colleges.shapes.copy <- college.shapes
+#colleges.shapes.copy@data <- college.shapes@data %>% filter(NAME == "MIDDLEBURY COLLEGE")
+#
+#
+#colleges.shapes.copy %>%
+#  leaflet() %>%
+#  addTiles() %>%
+#  addMarkers()
 
 
+#college.shapes %>%
+#  leaflet() %>%
+#  addTiles() %>%
+#  addMarkers()
+
+#rape vs. pop
+metrics.full %>%
+  ggplot(aes(x = Total.pop,
+             y = rate.rape,
+             color = Sector_desc)) +
+  geom_point()
+
+#statr vs. pop
+metrics.full %>%
+  ggplot(aes(x = Total.pop,
+             y = rate.statr,
+             color = Sector_desc)) +
+  geom_point()
+
+#fondl vs. pop
+metrics.full %>%
+  ggplot(aes(x = Total.pop,
+             y = rate.fondl,
+             color = Sector_desc)) +
+  geom_point()
+
+#vawa vs. pop
+metrics.full %>%
+  ggplot(aes(x = Total.pop,
+             y = rate.vawa,
+             color = Sector_desc)) +
+  geom_point()
+
+#public vs private
+metrics.full %>%
+  filter(!(INSTNM == "Christian Life College")) %>%
+  group_by(Sector_desc) %>%
+  summarize(agg_rape_rate = mean(rate.rape)) %>%
+  ggplot(aes(x = Sector_desc,
+             y = agg_rape_rate)) +
+  geom_bar(stat = "identity") +
+  theme_bw() +
+  scale_fill_manual(values = c("dodgerblue", "deeppink"))
