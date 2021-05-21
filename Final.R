@@ -159,7 +159,7 @@ total.joined.replaced.na <- total.joined %>%
   filter(!(is.na(State)))
 total.joined.replaced.na[is.na(total.joined.replaced.na)] = 0
 
-total.joined.replaced.na %>%
+total.metrics <- total.joined.replaced.na %>%
   group_by(INSTNM) %>%
   summarize(total.rape = sum(RAPE16,RAPE16.OFF, RAPE16.ON,
               RAPE17 , RAPE17.OFF, RAPE17.ON,
@@ -181,8 +181,11 @@ total.joined.replaced.na %>%
               STALK18, STALK18.OFF,STALK18.ON),
             Total.pop = mean(Total),
             men_total = mean(men_total),
-            women_total = mean(women_total)) %>%
-  view()
+            women_total = mean(women_total),
+            rate.rape = (total.rape/Total.pop)*100,
+            rate.statr = (total.statr/Total.pop)*100,
+            rate.fondl = (total.fondl/Total.pop)*100,
+            rate.vawa = (total.vawa/Total.pop)*100)
 
 
 #new code 5/20/21
