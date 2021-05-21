@@ -236,28 +236,32 @@ metrics.full %>%
   ggplot(aes(x = Total.pop,
              y = rate.rape,
              color = Sector_desc)) +
-  geom_point()
+  geom_point() +
+  theme_bw()
 
 #statr vs. pop
 metrics.full %>%
   ggplot(aes(x = Total.pop,
              y = rate.statr,
              color = Sector_desc)) +
-  geom_point()
+  geom_point() +
+  theme_bw()
 
 #fondl vs. pop
 metrics.full %>%
   ggplot(aes(x = Total.pop,
              y = rate.fondl,
              color = Sector_desc)) +
-  geom_point()
+  geom_point() +
+  theme_bw()
 
 #vawa vs. pop
 metrics.full %>%
   ggplot(aes(x = Total.pop,
              y = rate.vawa,
              color = Sector_desc)) +
-  geom_point()
+  geom_point() +
+  theme_bw()
 
 #public vs private
 metrics.full %>%
@@ -265,7 +269,9 @@ metrics.full %>%
   group_by(Sector_desc) %>%
   summarize(agg_rape_rate = mean(rate.rape)) %>%
   ggplot(aes(x = Sector_desc,
-             y = agg_rape_rate)) +
+             y = agg_rape_rate,
+             fill = Sector_desc)) +
   geom_bar(stat = "identity") +
-  theme_bw() +
-  scale_fill_manual(values = c("dodgerblue", "deeppink"))
+  #scale_fill_manual(values = c("darkred", "blue")) +
+  theme_bw()
+ 
