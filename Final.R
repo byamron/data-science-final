@@ -1,3 +1,5 @@
+
+
 library(tidyverse)
 library(rvest)
 library(pdftools)
@@ -9,6 +11,8 @@ library(reshape2)
 library(lubridate)
 library(geojsonio)
 library(leaflet)
+library(sf)
+library(sp)
 
 #read in data
 noncampus.crime <- read_csv("noncampuscrime161718.csv")
@@ -181,15 +185,40 @@ total.joined.replaced.na %>%
   view()
 
 
+#new code 5/20/21
+
+#reading in shape file 
+colleges.points.shape <- st_read("Colleges_and_Universities.shp")
+colleges.transform <- st_transform(colleges.points.shape, CRS("+proj=longlat +datum=WGS84 +no_defs"))
+
+colleges.transform %>%
+  leaflet() %>%
+  addTiles() %>%
+  addMarkers()
+
+#Trying to graph a leaflet is soooo slow, so we are going to try to use ggplot
+ggplot() + 
+  geom_sf(data = colleges.points.shape, size = 1, color = "black", fill = "cyan1") + 
+  coord_sf()
+
+
 #read in geojson file
 college.shapes <- geojson_read("Colleges_and_Universities.geojson",
              what = "sp")
 
+colleges.shapes.copy <- college.shapes
+colleges.shapes.copy@data <- college.shapes@data %>% filter(NAME == "MIDDLEBURY COLLEGE")
+
+
+colleges.shapes.copy %>%
+  leaflet() %>%
+  addTiles() %>%
+  addMarkers()
+
+
 college.shapes %>%
   leaflet() %>%
-  addTiles %>%
+  addTiles() %>%
   addMarkers()
- 
-  
 
 
