@@ -274,4 +274,66 @@ metrics.full %>%
   geom_bar(stat = "identity") +
   #scale_fill_manual(values = c("darkred", "blue")) +
   theme_bw()
+
+#### Divya's graph
+
+total.joined.na.narrative <- crime.joined %>%
+  inner_join(vawa.joined, by = c("UNITID_P",
+                                 "INSTNM",
+                                 "BRANCH",
+                                 "Address",
+                                 "City",
+                                 "State",
+                                 "ZIP",
+                                 "sector_cd",
+                                 "Sector_desc",
+                                 "men_total",
+                                 "women_total",
+                                 "Total")) %>% 
+  filter(!(is.na(State))) %>%
+  filter(!(Sector_desc %in% c("Administrative Unit Only",
+                              "Private for-profit, less-than 2-year",
+                              "Private nonprofit, less-than 2-year",
+                              "Public, less-than 2-year")))
+
+
+#filter(Sector_desc %in% c("Public, 4-year or above", "Private nonprofit, 4-year or above")) %>%
+#filter(!(is.na(State)))
+
+#rename columns based on original data sets
+colnames(total.joined.na.narrative) <- str_replace_all(colnames(total.joined.na.narrative),"x", "OFF")
+colnames(total.joined.na.narrative) <- str_replace_all(colnames(total.joined.na.narrative),"y", "ON")
+
+total.na.edited <- total.joined.na.narrative %>% select(RAPE16.ON, RAPE17.ON, RAPE18.ON,
+                                                        RAPE16.OFF, RAPE17.OFF, RAPE18.OFF,
+                                                        RAPE16, RAPE17, RAPE18, 
+                                                        DOMEST16.OFF, DOMEST17.OFF, DOMEST18.OFF,
+                                                        DOMEST16.ON, DOMEST17.ON, DOMEST18.ON,
+                                                        DOMEST16, DOMEST17, DOMEST18) 
+total.na.edited[!is.na(total.na.edited)] = 0
+total.na.edited[is.na(total.na.edited)] = 1
+
+total.na.scores <- total.na.edited %>% cbind(total.joined.na.narrative$Sector_desc) %>%
+  mutate(on.campus.sex.offenses = RAPE16.ON + RAPE17.ON + RAPE18.ON,
+         off.campus.sex.offenses = RAPE16.OFF + RAPE17.OFF + RAPE18.OFF,
+         residential.hall.sex.offensies = RAPE16 + RAPE17 + RAPE18,
+         on.campus.VAWA.crimes = DOMEST16.ON + DOMEST17.ON + DOMEST18.ON,
+         off.campus.VAWA.crimes = DOMEST16.OFF, DOMEST17.OFF, DOMEST18.OFF,
+         residential.hall.VAWA.crimes = DOMEST16, DOMEST17, DOMEST18) %>%
+  select(19:25)
+total.na.scores.long <- total.na.scores %>% pivot_longer(-`total.joined.na.narrative$Sector_desc`,
+                                                         names_to = "location",
+                                                         values_to = "frequency")
+
+heat.map.na.values <- total.na.scores.long %>% count(`total.joined.na.narrative$Sector_desc`, location, frequency)  %>%
+  filter(frequency == 1) 
+
+
+### graphs to show missing values
+heat.map.na.values %>%
+  ggplot(aes(x = factor(location),
+             y = factor(`total.joined.na.narrative$Sector_desc`))) +
+  geom_tile(aes(fill = n)) +
+  scale_fill_gradient(high = "green",
+                      low = "black")
  
