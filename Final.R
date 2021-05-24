@@ -313,6 +313,8 @@ total.na.edited <- total.joined.na.narrative %>% select(RAPE16.ON, RAPE17.ON, RA
 total.na.edited[!is.na(total.na.edited)] = 0
 total.na.edited[is.na(total.na.edited)] = 1
 
+
+
 total.na.scores <- total.na.edited %>% cbind(total.joined.na.narrative$Sector_desc) %>%
   mutate(on.campus.sex.offenses = RAPE16.ON + RAPE17.ON + RAPE18.ON,
          off.campus.sex.offenses = RAPE16.OFF + RAPE17.OFF + RAPE18.OFF,
@@ -321,19 +323,36 @@ total.na.scores <- total.na.edited %>% cbind(total.joined.na.narrative$Sector_de
          off.campus.VAWA.crimes = DOMEST16.OFF, DOMEST17.OFF, DOMEST18.OFF,
          residential.hall.VAWA.crimes = DOMEST16, DOMEST17, DOMEST18) %>%
   select(19:25)
-total.na.scores.long <- total.na.scores %>% pivot_longer(-`total.joined.na.narrative$Sector_desc`,
-                                                         names_to = "location",
-                                                         values_to = "frequency")
 
-heat.map.na.values <- total.na.scores.long %>% count(`total.joined.na.narrative$Sector_desc`, location, frequency)  %>%
-  filter(frequency == 1) 
+total.per.type <- total.joined.na.narrative %>%
+  count(Sector_desc)
+
+total.na.scores2 <- left_join(total.na.scores, total.per.type, 
+          by = c("total.joined.na.narrative$Sector_desc" = "Sector_desc"))
+
+
+total.na.scores.long <- total.na.scores2 %>% 
+  pivot_longer(-c(`total.joined.na.narrative$Sector_desc`, n),
+               names_to = "location",
+               values_to = "frequency")
+
+
+heat.map.na.values <- total.na.scores.long %>% 
+  add_count(`total.joined.na.narrative$Sector_desc`, 
+                                   location, 
+                                   frequency,
+            name = "number")  %>%
+  mutate(proportion = number/n) %>%
+  filter(frequency == 3)
 
 
 ### graphs to show missing values
 heat.map.na.values %>%
   ggplot(aes(x = factor(location),
              y = factor(`total.joined.na.narrative$Sector_desc`))) +
-  geom_tile(aes(fill = n)) +
+  geom_tile(aes(fill = proportion)) +
   scale_fill_gradient(high = "green",
-                      low = "black")
- 
+                      low = "black",
+                      na.value = "#000000")
+
+
