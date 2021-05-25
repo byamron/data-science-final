@@ -13,6 +13,7 @@ library(geojsonio)
 library(leaflet)
 library(sf)
 library(sp)
+library(ggtext)
 
 #read in data
 noncampus.crime <- read_csv("noncampuscrime161718.csv")
@@ -159,6 +160,7 @@ total.joined.replaced.na <- total.joined %>%
   filter(!(is.na(State)))
 total.joined.replaced.na[is.na(total.joined.replaced.na)] = 0
 
+#calculate total metrics and rates by population
 total.metrics <- total.joined.replaced.na %>%
   group_by(INSTNM) %>%
   summarize(total.rape = sum(RAPE16,RAPE16.OFF, RAPE16.ON,
@@ -195,42 +197,7 @@ metrics.full <- total.metrics %>%
   inner_join(school.type, by = "INSTNM") %>%
   unique()
 
-#new code 5/20/21
-
-#reading in shape file 
-#colleges.points.shape <- st_read("Colleges_and_Universities.shp")
-#colleges.transform <- st_transform(colleges.points.shape, CRS("+proj=longlat +datum=WGS84 +no_defs"))
-
-#colleges.transform %>%
-#  leaflet() %>%
-#  addTiles() %>%
-#  addMarkers()
-
-#Trying to graph a leaflet is soooo slow, so we are going to try to use ggplot
-#ggplot() + 
-#  geom_sf(data = colleges.points.shape, size = 1, color = "black", fill = "cyan1") + 
-#  coord_sf()
-
-
-#read in geojson file
-#college.shapes <- geojson_read("Colleges_and_Universities.geojson",
-#             what = "sp")
-
-#colleges.shapes.copy <- college.shapes
-#colleges.shapes.copy@data <- college.shapes@data %>% filter(NAME == "MIDDLEBURY COLLEGE")
-#
-#
-#colleges.shapes.copy %>%
-#  leaflet() %>%
-#  addTiles() %>%
-#  addMarkers()
-
-
-#college.shapes %>%
-#  leaflet() %>%
-#  addTiles() %>%
-#  addMarkers()
-
+#create graphs with total metrics
 #rape vs. pop
 metrics.full %>%
   ggplot(aes(x = Total.pop,
@@ -275,8 +242,9 @@ metrics.full %>%
   #scale_fill_manual(values = c("darkred", "blue")) +
   theme_bw()
 
-#### Divya's graph
+#### Missing Data graph
 
+#create data frame and filter out some school types
 total.joined.na.narrative <- crime.joined %>%
   inner_join(vawa.joined, by = c("UNITID_P",
                                  "INSTNM",
@@ -296,63 +264,91 @@ total.joined.na.narrative <- crime.joined %>%
                               "Private nonprofit, less-than 2-year",
                               "Public, less-than 2-year")))
 
-
-#filter(Sector_desc %in% c("Public, 4-year or above", "Private nonprofit, 4-year or above")) %>%
-#filter(!(is.na(State)))
-
 #rename columns based on original data sets
 colnames(total.joined.na.narrative) <- str_replace_all(colnames(total.joined.na.narrative),"x", "OFF")
 colnames(total.joined.na.narrative) <- str_replace_all(colnames(total.joined.na.narrative),"y", "ON")
 
+#find missing values
 total.na.edited <- total.joined.na.narrative %>% select(RAPE16.ON, RAPE17.ON, RAPE18.ON,
                                                         RAPE16.OFF, RAPE17.OFF, RAPE18.OFF,
                                                         RAPE16, RAPE17, RAPE18, 
                                                         DOMEST16.OFF, DOMEST17.OFF, DOMEST18.OFF,
                                                         DOMEST16.ON, DOMEST17.ON, DOMEST18.ON,
-                                                        DOMEST16, DOMEST17, DOMEST18) 
+                                                        DOMEST16, DOMEST17, DOMEST18)
+
+#convert missing data to binary values
 total.na.edited[!is.na(total.na.edited)] = 0
 total.na.edited[is.na(total.na.edited)] = 1
 
-
-
+#create metric totals
 total.na.scores <- total.na.edited %>% cbind(total.joined.na.narrative$Sector_desc) %>%
   mutate(on.campus.sex.offenses = RAPE16.ON + RAPE17.ON + RAPE18.ON,
          off.campus.sex.offenses = RAPE16.OFF + RAPE17.OFF + RAPE18.OFF,
-         residential.hall.sex.offensies = RAPE16 + RAPE17 + RAPE18,
+         residential.hall.sex.offenses = RAPE16 + RAPE17 + RAPE18,
          on.campus.VAWA.crimes = DOMEST16.ON + DOMEST17.ON + DOMEST18.ON,
          off.campus.VAWA.crimes = DOMEST16.OFF, DOMEST17.OFF, DOMEST18.OFF,
          residential.hall.VAWA.crimes = DOMEST16, DOMEST17, DOMEST18) %>%
   select(19:25)
 
+#organize by type of school
 total.per.type <- total.joined.na.narrative %>%
   count(Sector_desc)
 
 total.na.scores2 <- left_join(total.na.scores, total.per.type, 
           by = c("total.joined.na.narrative$Sector_desc" = "Sector_desc"))
 
-
+#lengthen data
 total.na.scores.long <- total.na.scores2 %>% 
   pivot_longer(-c(`total.joined.na.narrative$Sector_desc`, n),
                names_to = "location",
                values_to = "frequency")
 
-
+#calculate overall proportion of missing values for each school type
 heat.map.na.values <- total.na.scores.long %>% 
   add_count(`total.joined.na.narrative$Sector_desc`, 
                                    location, 
                                    frequency,
             name = "number")  %>%
-  mutate(proportion = number/n) %>%
-  filter(frequency == 3)
+  mutate(proportion = number/n)
 
+#add placeholder NA values for columns with missing info
+fix.na <- tibble(`total.joined.na.narrative$Sector_desc` = c("Private nonprofit, 2-year", 
+                                                            "Private for-profit, 2-year"),
+                 n = c(165, 760),
+                 location = c("residential.hall.sex.offenses", "residential.hall.sex.offenses"),
+                 frequency = c(2, 2),
+                 number = c(NA, NA),
+                 proportion = c(NA, NA))
+
+#rejoin data
+heat.map.full <- full_join(heat.map.na.values, fix.na, by = c("total.joined.na.narrative$Sector_desc",
+                                                              "n",
+                                                              "location",
+                                                              "frequency",
+                                                              "number",
+                                                              "proportion")) %>%
+  filter(frequency == 1)
 
 ### graphs to show missing values
-heat.map.na.values %>%
+heat.map.full %>%
   ggplot(aes(x = factor(location),
              y = factor(`total.joined.na.narrative$Sector_desc`))) +
   geom_tile(aes(fill = proportion)) +
   scale_fill_gradient(high = "green",
                       low = "black",
-                      na.value = "#000000")
+                      na.value = "#ffffff") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = -90)) +
+  scale_x_discrete(labels = c("Off Campus\nSex Offenses",
+                              "Off Campus\nVAWA Crimes",
+                              "On Campus\nSex Offenses",
+                              "On Campus\nVAWA Crimes",
+                              "Residential Hall\nSex Offenses",
+                              "Residential Hall\nVAWA Crimes")) +
+  xlab('Location and Category of Crime') +
+  ylab('Type of School') +
+  ggtitle(label = "Proportion of Schools with Missing Data for n Years, by Type") +
+  theme(plot.title = element_text(hjust = 0.5))
 
+  
 
