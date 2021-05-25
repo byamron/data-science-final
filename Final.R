@@ -268,7 +268,6 @@ total.joined.na.narrative <- crime.joined %>%
 colnames(total.joined.na.narrative) <- str_replace_all(colnames(total.joined.na.narrative),"x", "OFF")
 colnames(total.joined.na.narrative) <- str_replace_all(colnames(total.joined.na.narrative),"y", "ON")
 
-#find missing values
 total.na.edited <- total.joined.na.narrative %>% select(RAPE16.ON, RAPE17.ON, RAPE18.ON,
                                                         RAPE16.OFF, RAPE17.OFF, RAPE18.OFF,
                                                         RAPE16, RAPE17, RAPE18, 
@@ -280,15 +279,66 @@ total.na.edited <- total.joined.na.narrative %>% select(RAPE16.ON, RAPE17.ON, RA
 total.na.edited[!is.na(total.na.edited)] = 0
 total.na.edited[is.na(total.na.edited)] = 1
 
-#create metric totals
-total.na.scores <- total.na.edited %>% cbind(total.joined.na.narrative$Sector_desc) %>%
+#create totals for each metric
+total.na.scores <- total.na.edited %>% cbind(total.joined.na.narrative$INSTNM,
+                                             total.joined.na.narrative$Sector_desc) %>%
   mutate(on.campus.sex.offenses = RAPE16.ON + RAPE17.ON + RAPE18.ON,
          off.campus.sex.offenses = RAPE16.OFF + RAPE17.OFF + RAPE18.OFF,
          residential.hall.sex.offenses = RAPE16 + RAPE17 + RAPE18,
          on.campus.VAWA.crimes = DOMEST16.ON + DOMEST17.ON + DOMEST18.ON,
-         off.campus.VAWA.crimes = DOMEST16.OFF, DOMEST17.OFF, DOMEST18.OFF,
-         residential.hall.VAWA.crimes = DOMEST16, DOMEST17, DOMEST18) %>%
-  select(19:25)
+         off.campus.VAWA.crimes = DOMEST16.OFF + DOMEST17.OFF + DOMEST18.OFF,
+         residential.hall.VAWA.crimes = DOMEST16 + DOMEST17 + DOMEST18) %>%
+  select(19:26)
+
+#create a list of schools that shows how much missing info each has
+unreported.list <- total.joined %>%
+  select(RAPE16,RAPE16.OFF, RAPE16.ON,
+         RAPE17, RAPE17.OFF, RAPE17.ON,
+         RAPE18, RAPE18.OFF, RAPE18.ON,
+         STATR16, STATR16.OFF, STATR16.ON,
+         STATR17, STATR17.OFF, STATR17.ON ,
+         STATR18, STATR18.OFF, STATR18.ON,
+         FONDL16, FONDL16.OFF, FONDL16.ON , 
+         FONDL17, FONDL17.OFF, FONDL17.ON ,
+         FONDL18, FONDL18.OFF, FONDL18.ON,
+         DOMEST16, DOMEST16.OFF, DOMEST16.ON ,
+         DOMEST17, DOMEST17.OFF, DOMEST17.ON,
+         DOMEST18, DOMEST18.OFF, DOMEST18.ON,
+         DATING16, DATING16.OFF, DATING16.ON,
+         DATING17, DATING17.OFF, DATING17.ON,
+         DATING18, DATING18.OFF, DATING18.ON,
+         STALK16, STALK16.OFF, STALK16.ON,
+         STALK17, STALK17.OFF, STALK17.ON,
+         STALK18, STALK18.OFF, STALK18.ON)
+
+#convert missing data to binary values
+unreported.list[!is.na(unreported.list)] = 0
+unreported.list[is.na(unreported.list)] = 1
+
+#rejoin with names
+unreported.list2 <- cbind(total.joined$INSTNM, 
+                          total.joined$Sector_desc,
+                          total.joined$Total,
+                          unreported.list)
+
+#calculate total metrics to display
+unreported.list3 <- unreported.list2 %>%
+  group_by(`total.joined$INSTNM`) %>%
+  summarize(missing.sex.offenses16.on = sum(RAPE16.ON, STATR16.ON, FONDL16.ON),
+            missing.sex.offenses17.on = sum(RAPE17.ON, STATR17.ON, FONDL17.ON),
+            missing.sex.offenses18.on = sum(RAPE18.ON, STATR18.ON, FONDL18.ON),
+            missing.sex.offenses16.off = sum(RAPE16.OFF, STATR16.OFF, FONDL16.OFF),
+            missing.sex.offenses17.off = sum(RAPE17.OFF, STATR17.OFF, FONDL17.OFF),
+            missing.sex.offenses18.off = sum(RAPE18.OFF, STATR18.OFF, FONDL18.OFF),
+            missing.vawa.on16 = sum(DOMEST16.ON, STALK16.ON, DATING16.ON),
+            missing.vawa.on17 = sum(DOMEST17.ON, STALK17.ON, DATING17.ON),
+            missing.vawa.on18 = sum(DOMEST18.ON, STALK18.ON, DATING18.ON),
+            missing.vawa.off16 = sum(DOMEST16.ON, STALK16.ON, DATING16.ON),
+            missing.vawa.off17 = sum(DOMEST17.ON, STALK17.ON, DATING17.ON),
+            missing.vawa.off18 = sum(DOMEST18.ON, STALK18.ON, DATING18.ON))
+
+
+          
 
 #organize by type of school
 total.per.type <- total.joined.na.narrative %>%
@@ -327,7 +377,7 @@ heat.map.full <- full_join(heat.map.na.values, fix.na, by = c("total.joined.na.n
                                                               "frequency",
                                                               "number",
                                                               "proportion")) %>%
-  filter(frequency == 1)
+  filter(frequency == 3)
 
 ### graphs to show missing values
 heat.map.full %>%
