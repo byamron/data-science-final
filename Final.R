@@ -337,7 +337,45 @@ unreported.list3 <- unreported.list2 %>%
             missing.vawa.off17 = sum(DOMEST17.ON, STALK17.ON, DATING17.ON),
             missing.vawa.off18 = sum(DOMEST18.ON, STALK18.ON, DATING18.ON))
 
+#create lists of schools to filter by
+nescacs <- c("Middlebury College", 
+             "Amherst College", 
+             "Bates College", 
+             "Bowdoin College", 
+             "Hamilton College", 
+             "Connecticut College", 
+             "Tufts University",
+             "Trinity College", 
+             "Williams College",
+             "Colby College")
 
+ivies <- c("Brown University",
+           "Columbia University in the City of New York",
+           "Cornell University",
+           "Dartmouth College",
+           "Harvard University",
+           "University of Pennsylvania",
+           "Princeton University",
+           "Yale University")
+
+big10 <- c("Indiana University-Bloomington",
+           "University of Maryland-College Park",
+           "University of Michigan-Ann Arbor",
+           "Michigan State University",
+           "Ohio State University-Main Campus",
+           "Pennsylvania State University-Main Campus",
+           "Rutgers University-New Brunswick",
+           "University of Illinois at Urbana-Champaign",
+           "University of Iowa",
+           "University of Minnesota-Twin Cities",
+           "University of Nebraska-Lincoln",
+           "Northwestern University",
+           "Purdue University-Main Campus",
+           "University of Wisconsin-Madison")
+
+unreported.list3 %>%
+  filter(`total.joined$INSTNM` %in% ivies) %>%
+  view()
           
 
 #organize by type of school
