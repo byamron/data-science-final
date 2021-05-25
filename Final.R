@@ -1,5 +1,3 @@
-
-
 library(tidyverse)
 library(rvest)
 library(pdftools)
@@ -242,7 +240,99 @@ metrics.full %>%
   #scale_fill_manual(values = c("darkred", "blue")) +
   theme_bw()
 
-#### Missing Data graph
+#Compare two schools
+#reported cases over time
+total.long <- total.joined.replaced.na %>%
+  select(-c(UNITID_P, Address, CitON, ZIP, sector_cd)) %>%
+  pivot_longer(-c(INSTNM, BRANCH, State, Sector_desc, men_total, women_total, Total),
+               names_to = "crime.details",
+               values_to = "reported cases") %>%
+  mutate(location = ifelse(str_detect(crime.details, "ON"),
+                           "On Campus",
+                           ifelse(str_detect(crime.details, "OFF"),
+                                             "Off Campus",
+                                             "Residence Hall"))) %>%
+  mutate(crime = ifelse(str_detect(crime.details, "RAPE"),
+                        "Rape",
+                        ifelse(str_detect(crime.details, "FONDL"),
+                               "Fondling",
+                               ifelse(str_detect(crime.details, "STATR"),
+                                      "Statutory Rape",
+                                      ifelse(str_detect(crime.details, "DOMEST"),
+                                             "Domestic Violence",
+                                             ifelse(str_detect(crime.details, "STALK"),
+                                                    "Stalking", "Dating Violence")))))) %>%
+  mutate(year = ifelse(str_detect(crime.details, "16"),
+                         "2016",
+                         ifelse(str_detect(crime.details, "17"),
+                                "2017", "2018")))
+  
+  
+#school comparison - single metric
+total.long %>%
+  filter(INSTNM %in% c("Middlebury College", "Williams College")) %>%
+  filter(location == "On Campus") %>%
+  filter(crime == "Fondling") %>%
+  ggplot(aes(x = as.numeric(year),
+             y = `reported cases`,
+             fill = INSTNM)) +
+  geom_bar(stat = "identity",
+           position = "dodge") +
+  theme_bw() + 
+  labs(title = "Reported Cases over Time",
+       subtitle = "2016-2018",
+       x = "Year",
+       y = "Reported Cases") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  scale_fill_manual(name = "School", values = c("dodgerblue3", "orange"))
+
+#create long version of metrics df
+metrics.long <- metrics.full %>%
+  pivot_longer(-c('INSTNM',
+                  'total.rape',
+                  'total.statr',
+                  'total.fondl',
+                  'total.vawa',
+                  'Total.pop',
+                  'men_total',
+                  'women_total',
+                  'Sector_desc'),
+               names_to = "crime",
+               values_to = "rate") %>%
+  #str_replace_all(metrics.full$crime, "rate.rape", "Rape") %>%
+  #str_replace_all(crime, "rate.fondl", "Fondling") %>%
+  # str_replace_all(crime, "rate.statr", "Statutory Rape") %>%
+  # str_replace_all(crime, "rate.vawa", "VAWA") %>%
+  select(c(INSTNM,
+           Sector_desc,
+           crime,
+           rate))
+
+metrics.long$crime <- str_replace_all(metrics.long$crime, "rate.rape", "Rape") 
+metrics.long$crime <- str_replace_all(metrics.long$crime, "rate.fondl", "Fondling") 
+metrics.long$crime <- str_replace_all(metrics.long$crime, "rate.statr", "Statutory Rape") 
+metrics.long$crime <- str_replace_all(metrics.long$crime, "rate.vawa", "VAWA")
+
+#school comparison - rates
+metrics.long %>%
+  filter(INSTNM %in% c("Middlebury College", "University of Michigan-Ann Arbor")) %>%
+  ggplot(aes(x = INSTNM,
+             y = rate,
+             fill = crime)) +
+  geom_bar(stat = "identity",
+           position = "dodge") +
+  theme_bw() + 
+  labs(title = "Cases per 100 Students",
+       subtitle = "2016-2018",
+       x = "School",
+       y = "Cases per Total Population (%)") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  scale_fill_manual(name = "Crime", values = c("dodgerblue3", "orange", "plum1", "olivedrab3")) +
+  coord_flip()
+
+#################### Missing Data graph ####################
 
 #create data frame and filter out some school types
 total.joined.na.narrative <- crime.joined %>%
@@ -289,6 +379,67 @@ total.na.scores <- total.na.edited %>% cbind(total.joined.na.narrative$INSTNM,
          off.campus.VAWA.crimes = DOMEST16.OFF + DOMEST17.OFF + DOMEST18.OFF,
          residential.hall.VAWA.crimes = DOMEST16 + DOMEST17 + DOMEST18) %>%
   select(19:26)
+
+#organize by type of school
+total.per.type <- total.joined.na.narrative %>%
+  count(Sector_desc)
+
+total.na.scores2 <- left_join(total.na.scores, total.per.type, 
+          by = c("total.joined.na.narrative$Sector_desc" = "Sector_desc"))
+
+#lengthen data
+total.na.scores.long <- total.na.scores2 %>% 
+  pivot_longer(-c(`total.joined.na.narrative$Sector_desc`, n),
+               names_to = "location",
+               values_to = "frequency")
+
+#calculate overall proportion of missing values for each school type
+heat.map.na.values <- total.na.scores.long %>% 
+  add_count(`total.joined.na.narrative$Sector_desc`, 
+                                   location, 
+                                   frequency,
+            name = "number")  %>%
+  mutate(proportion = number/n)
+
+#add placeholder NA values for columns with missing info
+fix.na <- tibble(`total.joined.na.narrative$Sector_desc` = c("Private nonprofit, 2-year", 
+                                                            "Private for-profit, 2-year"),
+                 n = c(165, 760),
+                 location = c("residential.hall.sex.offenses", "residential.hall.sex.offenses"),
+                 frequency = c(2, 2),
+                 number = c(NA, NA),
+                 proportion = c(NA, NA))
+
+#rejoin data
+heat.map.full <- full_join(heat.map.na.values, fix.na, by = c("total.joined.na.narrative$Sector_desc",
+                                                              "n",
+                                                              "location",
+                                                              "frequency",
+                                                              "number",
+                                                              "proportion")) %>%
+  filter(frequency == 1)
+
+### graphs to show missing values
+heat.map.full %>%
+  ggplot(aes(x = factor(location),
+             y = factor(`total.joined.na.narrative$Sector_desc`))) +
+  geom_tile(aes(fill = proportion)) +
+  scale_fill_gradient(high = "green",
+                      low = "black",
+                      na.value = "#ffffff") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 0)) +
+  scale_x_discrete(labels = c("Off Campus\nSex Offenses",
+                              "Off Campus\nVAWA Crimes",
+                              "On Campus\nSex Offenses",
+                              "On Campus\nVAWA Crimes",
+                              "Residential Hall\nSex Offenses",
+                              "Residential Hall\nVAWA Crimes")) +
+  xlab('Location and Category of Crime') +
+  ylab('Type of School') +
+  ggtitle(label = "Proportion of Schools with Missing Data for n Years, by Type") +
+  theme(plot.title = element_text(hjust = 0.5))
+
 
 #create a list of schools that shows how much missing info each has
 unreported.list <- total.joined %>%
@@ -374,69 +525,9 @@ big10 <- c("Indiana University-Bloomington",
            "University of Wisconsin-Madison")
 
 unreported.list3 %>%
-  filter(`total.joined$INSTNM` %in% ivies) %>%
+  filter(`total.joined$INSTNM` %in% big10) %>%
   view()
-          
 
-#organize by type of school
-total.per.type <- total.joined.na.narrative %>%
-  count(Sector_desc)
-
-total.na.scores2 <- left_join(total.na.scores, total.per.type, 
-          by = c("total.joined.na.narrative$Sector_desc" = "Sector_desc"))
-
-#lengthen data
-total.na.scores.long <- total.na.scores2 %>% 
-  pivot_longer(-c(`total.joined.na.narrative$Sector_desc`, n),
-               names_to = "location",
-               values_to = "frequency")
-
-#calculate overall proportion of missing values for each school type
-heat.map.na.values <- total.na.scores.long %>% 
-  add_count(`total.joined.na.narrative$Sector_desc`, 
-                                   location, 
-                                   frequency,
-            name = "number")  %>%
-  mutate(proportion = number/n)
-
-#add placeholder NA values for columns with missing info
-fix.na <- tibble(`total.joined.na.narrative$Sector_desc` = c("Private nonprofit, 2-year", 
-                                                            "Private for-profit, 2-year"),
-                 n = c(165, 760),
-                 location = c("residential.hall.sex.offenses", "residential.hall.sex.offenses"),
-                 frequency = c(2, 2),
-                 number = c(NA, NA),
-                 proportion = c(NA, NA))
-
-#rejoin data
-heat.map.full <- full_join(heat.map.na.values, fix.na, by = c("total.joined.na.narrative$Sector_desc",
-                                                              "n",
-                                                              "location",
-                                                              "frequency",
-                                                              "number",
-                                                              "proportion")) %>%
-  filter(frequency == 3)
-
-### graphs to show missing values
-heat.map.full %>%
-  ggplot(aes(x = factor(location),
-             y = factor(`total.joined.na.narrative$Sector_desc`))) +
-  geom_tile(aes(fill = proportion)) +
-  scale_fill_gradient(high = "green",
-                      low = "black",
-                      na.value = "#ffffff") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = -90)) +
-  scale_x_discrete(labels = c("Off Campus\nSex Offenses",
-                              "Off Campus\nVAWA Crimes",
-                              "On Campus\nSex Offenses",
-                              "On Campus\nVAWA Crimes",
-                              "Residential Hall\nSex Offenses",
-                              "Residential Hall\nVAWA Crimes")) +
-  xlab('Location and Category of Crime') +
-  ylab('Type of School') +
-  ggtitle(label = "Proportion of Schools with Missing Data for n Years, by Type") +
-  theme(plot.title = element_text(hjust = 0.5))
 
   
 
