@@ -246,10 +246,6 @@ metrics.long <- metrics.full %>%
                   'Sector_desc'),
                names_to = "crime",
                values_to = "rate") %>%
-  #str_replace_all(metrics.full$crime, "rate.rape", "Rape") %>%
-  #str_replace_all(crime, "rate.fondl", "Fondling") %>%
-  # str_replace_all(crime, "rate.statr", "Statutory Rape") %>%
-  # str_replace_all(crime, "rate.vawa", "VAWA") %>%
   select(c(INSTNM,
            Sector_desc,
            crime,
@@ -275,13 +271,12 @@ metrics.long %>%
        y = "Cases per Total Population (%)") +
   theme(plot.title = element_text(hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5)) +
-  scale_fill_manual(name = "Crime", values = c("dodgerblue3", "orange", "plum1", "olivedrab3")) #+
-  #coord_flip()
+  scale_fill_manual(name = "Crime", values = c("dodgerblue3", "orange", "plum1", "olivedrab3"))
+  # + coord_flip()
 
 # Define UI for application that draws a histogram
 ui <- navbarPage(
     title = strong("Investigating Sexual Assault Occurrences on College Campuses"),
-    #tabPanel(h3("Creators: Divya Gudur, Ben Yamron, Selin Everett", align = "center")),
     tabPanel("Cover",
              h3("Math 216 Final Project", align = "center"),
              h3("Creators: Divya Gudur, Ben Yamron, Selin Everett", align = "center"),
@@ -295,9 +290,9 @@ ui <- navbarPage(
              selectInput(inputId = "numberofyears",
                          label = "Number of years of missing data:",
                          choices = c("One year", "Two years", "Three years")),
-             selectInput(inputId = "location",
+             selectInput(inputId = "loc2",
                          label = "CLERY location:",
-                         choices = c("On campus", "Off campus", "Student housing")),
+                         choices = c(unique(total.long$loc))),
              selectizeInput(inputId = "institutiontype",
                             label = "Pick an institution type",
                             choices = c("Public, 4-year or above",
@@ -323,9 +318,9 @@ ui <- navbarPage(
                       selectInput(inputId = "offense",
                                   label = "Choose an offense",
                                   choices = c(unique(total.long$crime))),
-                      plotOutput("crimes_over_time")
-                      #plotOutput("rates")
-                      ))
+                      plotOutput("crimes_over_time"),
+                      plotOutput("comparison_rates")
+             ))
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
@@ -350,7 +345,24 @@ server <- function(input, output) {
       theme(plot.title = element_text(hjust = 0.5),
             plot.subtitle = element_text(hjust = 0.5)) +
       scale_fill_manual(name = "School", values = c("dodgerblue3", "orange"))
-    
+  )
+  output$comparison_rates <- renderPlot(
+    metrics.long %>%
+      filter(INSTNM %in% c(input$school1, input$school2)) %>%
+      ggplot(aes(x = INSTNM,
+                 y = rate,
+                 fill = crime)) +
+      geom_bar(stat = "identity",
+               position = "dodge") +
+      theme_bw() + 
+      labs(title = "Cases per 100 Students",
+           subtitle = "2016-2018",
+           x = "School",
+           y = "Cases per Total Population (%)") +
+      theme(plot.title = element_text(hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5)) +
+      scale_fill_manual(name = "Crime", values = c("dodgerblue3", "orange", "plum1", "olivedrab3"))
+    # + coord_flip()
   )
 }
 
