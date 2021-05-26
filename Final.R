@@ -12,6 +12,7 @@ library(leaflet)
 library(sf)
 library(sp)
 library(ggtext)
+library(knitr)
 
 #read in data
 noncampus.crime <- read_csv("noncampuscrime161718.csv")
@@ -358,7 +359,7 @@ total.joined.na.narrative <- crime.joined %>%
 colnames(total.joined.na.narrative) <- str_replace_all(colnames(total.joined.na.narrative),"x", "OFF")
 colnames(total.joined.na.narrative) <- str_replace_all(colnames(total.joined.na.narrative),"y", "ON")
 
-total.na.edited <- total.joined.na.narrative %>% select(RAPE16.ON, RAPE17.ON, RAPE18.ON,
+total.na.edited <- total.joined.na.narrative %>% select(RAPE16.ON,RAPE17.ON, RAPE18.ON,
                                                         RAPE16.OFF, RAPE17.OFF, RAPE18.OFF,
                                                         RAPE16, RAPE17, RAPE18, 
                                                         DOMEST16.OFF, DOMEST17.OFF, DOMEST18.OFF,
@@ -389,26 +390,32 @@ total.na.scores2 <- left_join(total.na.scores, total.per.type,
 
 #lengthen data
 total.na.scores.long <- total.na.scores2 %>% 
-  pivot_longer(-c(`total.joined.na.narrative$Sector_desc`, n),
+  pivot_longer(-c(`total.joined.na.narrative$INSTNM`, `total.joined.na.narrative$Sector_desc`, n),
                names_to = "location",
                values_to = "frequency")
 
 #calculate overall proportion of missing values for each school type
 heat.map.na.values <- total.na.scores.long %>% 
   add_count(`total.joined.na.narrative$Sector_desc`, 
-                                   location, 
-                                   frequency,
+            location, 
+            frequency,
             name = "number")  %>%
-  mutate(proportion = number/n)
+  mutate(proportion = number/n) #%>%
+#filter(frequency == 1)
 
 #add placeholder NA values for columns with missing info
-fix.na <- tibble(`total.joined.na.narrative$Sector_desc` = c("Private nonprofit, 2-year", 
-                                                            "Private for-profit, 2-year"),
-                 n = c(165, 760),
-                 location = c("residential.hall.sex.offenses", "residential.hall.sex.offenses"),
-                 frequency = c(2, 2),
-                 number = c(NA, NA),
-                 proportion = c(NA, NA))
+fix.na <- tibble(`total.joined.na.narrative$Sector_desc` = c("Private nonprofit, 2-year",
+                                                             "Private nonprofit, 2-year",
+                                                             "Private for-profit, 2-year",
+                                                             "Private for-profit, 2-year"),
+                 n = c(165, 165, 760, 760),
+                 location = c("residential.hall.sex.offenses", 
+                              "residential.hall.VAWA.crimes", 
+                              "residential.hall.sex.offenses",
+                              "residential.hall.VAWA.crimes"),
+                 frequency = c(2, 2, 2, 2),
+                 number = c(NA, NA, NA, NA),
+                 proportion = c(NA, NA, NA, NA))
 
 #rejoin data
 heat.map.full <- full_join(heat.map.na.values, fix.na, by = c("total.joined.na.narrative$Sector_desc",
@@ -417,7 +424,7 @@ heat.map.full <- full_join(heat.map.na.values, fix.na, by = c("total.joined.na.n
                                                               "frequency",
                                                               "number",
                                                               "proportion")) %>%
-  filter(frequency == 1)
+  filter(frequency == 2)
 
 ### graphs to show missing values
 heat.map.full %>%
@@ -439,7 +446,6 @@ heat.map.full %>%
   ylab('Type of School') +
   ggtitle(label = "Proportion of Schools with Missing Data for n Years, by Type") +
   theme(plot.title = element_text(hjust = 0.5))
-
 
 #create a list of schools that shows how much missing info each has
 unreported.list <- total.joined %>%
