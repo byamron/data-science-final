@@ -1,18 +1,15 @@
 library(tidyverse)
 library(rvest)
-library(pdftools)
-library(tm)
 library(stringr)
 library(tidytext)
 library(tidyr)
-library(reshape2)
 library(lubridate)
+library(shiny)
 library(geojsonio)
 library(leaflet)
 library(sf)
 library(sp)
 library(ggtext)
-library(knitr)
 
 #read in data
 noncampus.crime <- read_csv("noncampuscrime161718.csv")
@@ -100,16 +97,10 @@ vawa.list <- list(noncampus.vawa,
                   oncampus.vawa,
                   reshall.vawa)
 
-frames.list <- list(noncampus.crime,
-                    noncampus.vawa, 
-                    oncampus.crime, 
-                    oncampus.vawa,
-                    reshall.crime,
-                    reshall.vawa)
-
+#begin joining
 crime.joined <- crime.list %>% reduce(inner_join, by = c("UNITID_P",
-                                                          "INSTNM",
-                                                          "BRANCH",
+                                                         "INSTNM",
+                                                         "BRANCH",
                                                          "Address",
                                                          "City",
                                                          "State",
@@ -136,17 +127,17 @@ vawa.joined <- vawa.list %>% reduce(inner_join, by = c("UNITID_P",
 #join all data sets
 total.joined <- crime.joined %>%
   inner_join(vawa.joined, by = c("UNITID_P",
-                                "INSTNM",
-                                "BRANCH",
-                                "Address",
-                                "City",
-                                "State",
-                                "ZIP",
-                                "sector_cd",
-                                "Sector_desc",
-                                "men_total",
-                                "women_total",
-                                "Total")) %>%
+                                 "INSTNM",
+                                 "BRANCH",
+                                 "Address",
+                                 "City",
+                                 "State",
+                                 "ZIP",
+                                 "sector_cd",
+                                 "Sector_desc",
+                                 "men_total",
+                                 "women_total",
+                                 "Total")) %>%
   filter(Sector_desc %in% c("Public, 4-year or above", "Private nonprofit, 4-year or above")) %>%
   filter(!(is.na(State)))
 
@@ -163,23 +154,23 @@ total.joined.replaced.na[is.na(total.joined.replaced.na)] = 0
 total.metrics <- total.joined.replaced.na %>%
   group_by(INSTNM) %>%
   summarize(total.rape = sum(RAPE16,RAPE16.OFF, RAPE16.ON,
-              RAPE17 , RAPE17.OFF, RAPE17.ON,
-              RAPE18,RAPE18.OFF,RAPE18.ON),
+                             RAPE17 , RAPE17.OFF, RAPE17.ON,
+                             RAPE18,RAPE18.OFF,RAPE18.ON),
             total.statr = sum(STATR16,STATR16.OFF,STATR16.ON,
-              STATR17,STATR17.OFF,STATR17.ON ,
-              STATR18,STATR18.OFF,STATR18.ON),
+                              STATR17,STATR17.OFF,STATR17.ON ,
+                              STATR18,STATR18.OFF,STATR18.ON),
             total.fondl = sum(FONDL16 ,FONDL16.OFF ,FONDL16.ON , 
-              FONDL17,FONDL17.OFF ,FONDL17.ON ,
-              FONDL18 ,FONDL18.OFF ,FONDL18.ON),
+                              FONDL17,FONDL17.OFF ,FONDL17.ON ,
+                              FONDL18 ,FONDL18.OFF ,FONDL18.ON),
             total.vawa = sum(DOMEST16 ,DOMEST16.OFF , DOMEST16.ON ,
-              DOMEST17, DOMEST17.OFF,DOMEST17.ON,
-              DOMEST18,DOMEST18.OFF,DOMEST18.ON,
-              DATING16, DATING16.OFF, DATING16.ON,
-              DATING17,DATING17.OFF,DATING17.ON,
-              DATING18,DATING18.OFF,DATING18.ON,
-              STALK16,STALK16.OFF,STALK16.ON,
-              STALK17,STALK17.OFF,STALK17.ON,
-              STALK18, STALK18.OFF,STALK18.ON),
+                             DOMEST17, DOMEST17.OFF,DOMEST17.ON,
+                             DOMEST18,DOMEST18.OFF,DOMEST18.ON,
+                             DATING16, DATING16.OFF, DATING16.ON,
+                             DATING17,DATING17.OFF,DATING17.ON,
+                             DATING18,DATING18.OFF,DATING18.ON,
+                             STALK16,STALK16.OFF,STALK16.ON,
+                             STALK17,STALK17.OFF,STALK17.ON,
+                             STALK18, STALK18.OFF,STALK18.ON),
             Total.pop = mean(Total),
             men_total = mean(men_total),
             women_total = mean(women_total),
@@ -196,53 +187,8 @@ metrics.full <- total.metrics %>%
   inner_join(school.type, by = "INSTNM") %>%
   unique()
 
-#create graphs with total metrics
-#rape vs. pop
-metrics.full %>%
-  ggplot(aes(x = Total.pop,
-             y = rate.rape,
-             color = Sector_desc)) +
-  geom_point() +
-  theme_bw()
-
-#statr vs. pop
-metrics.full %>%
-  ggplot(aes(x = Total.pop,
-             y = rate.statr,
-             color = Sector_desc)) +
-  geom_point() +
-  theme_bw()
-
-#fondl vs. pop
-metrics.full %>%
-  ggplot(aes(x = Total.pop,
-             y = rate.fondl,
-             color = Sector_desc)) +
-  geom_point() +
-  theme_bw()
-
-#vawa vs. pop
-metrics.full %>%
-  ggplot(aes(x = Total.pop,
-             y = rate.vawa,
-             color = Sector_desc)) +
-  geom_point() +
-  theme_bw()
-
-#public vs private
-metrics.full %>%
-  filter(!(INSTNM == "Christian Life College")) %>%
-  group_by(Sector_desc) %>%
-  summarize(agg_rape_rate = mean(rate.rape)) %>%
-  ggplot(aes(x = Sector_desc,
-             y = agg_rape_rate,
-             fill = Sector_desc)) +
-  geom_bar(stat = "identity") +
-  #scale_fill_manual(values = c("darkred", "blue")) +
-  theme_bw()
-
 #Compare two schools
-#reported cases over time
+#create df to display reported cases over time
 total.long <- total.joined.replaced.na %>%
   select(-c(UNITID_P, Address, CitON, ZIP, sector_cd)) %>%
   pivot_longer(-c(INSTNM, BRANCH, State, Sector_desc, men_total, women_total, Total),
@@ -251,8 +197,8 @@ total.long <- total.joined.replaced.na %>%
   mutate(location = ifelse(str_detect(crime.details, "ON"),
                            "On Campus",
                            ifelse(str_detect(crime.details, "OFF"),
-                                             "Off Campus",
-                                             "Residence Hall"))) %>%
+                                  "Off Campus",
+                                  "Residence Hall"))) %>%
   mutate(crime = ifelse(str_detect(crime.details, "RAPE"),
                         "Rape",
                         ifelse(str_detect(crime.details, "FONDL"),
@@ -264,11 +210,10 @@ total.long <- total.joined.replaced.na %>%
                                              ifelse(str_detect(crime.details, "STALK"),
                                                     "Stalking", "Dating Violence")))))) %>%
   mutate(year = ifelse(str_detect(crime.details, "16"),
-                         "2016",
-                         ifelse(str_detect(crime.details, "17"),
-                                "2017", "2018")))
-  
-  
+                       "2016",
+                       ifelse(str_detect(crime.details, "17"),
+                              "2017", "2018")))
+
 #school comparison - single metric
 total.long %>%
   filter(INSTNM %in% c("Middlebury College", "Williams College")) %>%
@@ -301,10 +246,6 @@ metrics.long <- metrics.full %>%
                   'Sector_desc'),
                names_to = "crime",
                values_to = "rate") %>%
-  #str_replace_all(metrics.full$crime, "rate.rape", "Rape") %>%
-  #str_replace_all(crime, "rate.fondl", "Fondling") %>%
-  # str_replace_all(crime, "rate.statr", "Statutory Rape") %>%
-  # str_replace_all(crime, "rate.vawa", "VAWA") %>%
   select(c(INSTNM,
            Sector_desc,
            crime,
@@ -330,10 +271,10 @@ metrics.long %>%
        y = "Cases per Total Population (%)") +
   theme(plot.title = element_text(hjust = 0.5),
         plot.subtitle = element_text(hjust = 0.5)) +
-  scale_fill_manual(name = "Crime", values = c("dodgerblue3", "orange", "plum1", "olivedrab3")) +
-  coord_flip()
+  scale_fill_manual(name = "Crime", values = c("dodgerblue3", "orange", "plum1", "olivedrab3"))
+  # + coord_flip()
 
-#################### Missing Data graph ####################
+#################### Missing Data Graphs ####################
 
 #create data frame and filter out some school types
 total.joined.na.narrative <- crime.joined %>%
@@ -386,7 +327,7 @@ total.per.type <- total.joined.na.narrative %>%
   count(Sector_desc)
 
 total.na.scores2 <- left_join(total.na.scores, total.per.type, 
-          by = c("total.joined.na.narrative$Sector_desc" = "Sector_desc"))
+                              by = c("total.joined.na.narrative$Sector_desc" = "Sector_desc"))
 
 #lengthen data
 total.na.scores.long <- total.na.scores2 %>% 
@@ -426,7 +367,6 @@ heat.map.full <- full_join(heat.map.na.values, fix.na, by = c("total.joined.na.n
 
 ### graphs to show missing values
 heat.map.full %>%
-  filter(frequency == 2) %>%
   ggplot(aes(x = factor(location),
              y = factor(`total.joined.na.narrative$Sector_desc`))) +
   geom_tile(aes(fill = proportion)) +
@@ -445,6 +385,9 @@ heat.map.full %>%
   ylab('Type of School') +
   ggtitle(label = "Proportion of Schools with Missing Data for n Years, by Type") +
   theme(plot.title = element_text(hjust = 0.5))
+
+#define frequency variable for input
+frequency <- NULL
 
 #create a list of schools that shows how much missing info each has
 unreported.list <- total.joined %>%
@@ -495,24 +438,24 @@ unreported.list3 <- unreported.list2 %>%
 
 #create lists of schools to filter by
 NESCAC <- c("Middlebury College", 
-             "Amherst College", 
-             "Bates College", 
-             "Bowdoin College", 
-             "Hamilton College", 
-             "Connecticut College", 
-             "Tufts University",
-             "Trinity College", 
-             "Williams College",
-             "Colby College")
+            "Amherst College", 
+            "Bates College", 
+            "Bowdoin College", 
+            "Hamilton College", 
+            "Connecticut College", 
+            "Tufts University",
+            "Trinity College", 
+            "Williams College",
+            "Colby College")
 
 IvyLeague <- c("Brown University",
-           "Columbia University in the City of New York",
-           "Cornell University",
-           "Dartmouth College",
-           "Harvard University",
-           "University of Pennsylvania",
-           "Princeton University",
-           "Yale University")
+               "Columbia University in the City of New York",
+               "Cornell University",
+               "Dartmouth College",
+               "Harvard University",
+               "University of Pennsylvania",
+               "Princeton University",
+               "Yale University")
 
 Big10 <- c("Indiana University-Bloomington",
            "University of Maryland-College Park",
@@ -529,10 +472,7 @@ Big10 <- c("Indiana University-Bloomington",
            "Purdue University-Main Campus",
            "University of Wisconsin-Madison")
 
-unreported.list3 %>%
-  filter(`total.joined$INSTNM` %in% big10) %>%
-  view()
-
+#lengthen unreported df for interactive table
 unreported.long <- unreported.list3 %>%
   pivot_longer(-`total.joined$INSTNM`,
                names_to = "crime.details",
@@ -544,14 +484,169 @@ unreported.long <- unreported.list3 %>%
                                   "Residence Hall"))) %>%
   mutate(crime = ifelse(str_detect(crime.details, "sex.offenses"),
                         "Sex Offenses",
-                       "VAWA")) %>%
+                        "VAWA")) %>%
   mutate(year = ifelse(str_detect(crime.details, "16"),
                        "2016",
                        ifelse(str_detect(crime.details, "17"),
                               "2017", "2018")))
 
+#calculate total missing reports by schools in table
 unreported.totals <- unreported.long %>%
   group_by(`total.joined$INSTNM`) %>%
   summarize(Total.Reports.Missing = sum(`Reporting Categories Missing`))
-  
 
+############################## SHINY APP ##############################
+
+# Define UI for application that draws a histogram
+ui <- navbarPage(
+    title = strong("Investigating Sexual Assault Occurrences on College Campuses"),
+    tabPanel("Cover",
+             h3("Math 216 Final Project", align = "center"),
+             h3("Creators: Divya Gudur, Ben Yamron, Selin Everett", align = "center"),
+             h4(em("We have neither given nor received unauthorized aid on this assignment"),  align = "center")),
+             
+    tabPanel("Schools' Reporting Levels",
+             # selectizeInput(inputId = "reportinglevels",
+             #             label = "Choose a school",
+             #             choices = c(unique(metrics.long$INSTNM))),
+            
+             selectInput(inputId = "numberofyears",
+                         label = "Number of years of missing data:",
+                         choices = c("1", "2", "3")),
+             plotOutput("heatmap"),
+             flowLayout(selectInput(inputId = "conference.picker",
+                         label = "Choose a Conference",
+                         choices = c("NESCAC", "IvyLeague", "Big10"),
+                         multiple = F),
+                        selectInput(inputId = "crime.picker",
+                                    label = "Choose an Offense",
+                                    choices = c(unique(unreported.long$crime))),
+                        selectInput(inputId = "location.picker",
+                                    label = "Choose a Location",
+                                    choices = c(unique(unreported.long$location))),
+                        selectInput(inputId = "year.picker",
+                                    label = "Choose a Year",
+                                    choices = c(unique(unreported.long$year)))),
+             splitLayout(tableOutput("conference.report"),
+                        tableOutput("conference.totals"))
+             # selectInput(inputId = "loc2",
+             #             label = "CLERY location:",
+             #             choices = c(unique(total.long$location))),
+             # selectizeInput(inputId = "institutiontype",
+             #                label = "Pick an institution type",
+             #                choices = c("Public, 4-year or above",
+             #                            "Private not-for-profit, 4-year",
+             #                            "Private for-profit, 4-year",
+             #                            "Public, 2-year",
+             #                            "Private not-for-profit, 2-year",
+             #                            "Private for-profit, 2-year",
+             #                            "Public, less-than 2-year"))),
+    ),
+             
+             tabPanel("Comparing Schools' Sexual Assault Rates",
+                      flowLayout(selectizeInput(inputId = "school1",
+                                                label = "Choose a school",
+                                                choices = c(unique(total.long$INSTNM)),
+                                                multiple = F),
+                                 selectizeInput(inputId = "school2",
+                                                label = "Choose another school",
+                                                choices = c(unique(total.long$INSTNM)),
+                                                multiple = F),
+                                 selectInput(inputId = "loc",
+                                             label = "Choose a CLERY location",
+                                             choices = c(unique(total.long$location))),
+                                 selectInput(inputId = "offense",
+                                             label = "Choose an offense",
+                                             choices = c(unique(total.long$crime)))), 
+                      plotOutput("crimes_over_time"),
+                      plotOutput("comparison_rates")
+             )
+    )
+
+# Define server logic
+server <- function(input, output) {
+  #### Reporting (page2) graph1
+  output$heatmap <- renderPlot(
+  heat.map.full %>%
+    filter(frequency == input$numberofyears) %>%
+    ggplot(aes(x = factor(location),
+               y = factor(`total.joined.na.narrative$Sector_desc`))) +
+    geom_tile(aes(fill = proportion)) +
+    scale_fill_gradient(high = "green",
+                        low = "black",
+                        na.value = "#ffffff") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 0)) +
+    scale_x_discrete(labels = c("Off Campus\nSex Offenses",
+                                "Off Campus\nVAWA Crimes",
+                                "On Campus\nSex Offenses",
+                                "On Campus\nVAWA Crimes",
+                                "Residential Hall\nSex Offenses",
+                                "Residential Hall\nVAWA Crimes")) +
+    xlab('Location and Category of Crime') +
+    ylab('Type of School') +
+    ggtitle(label = "Proportion of Schools with Missing Data for n Years, by Type") +
+    theme(plot.title = element_text(hjust = 0.5))
+  )
+  
+  #### Reporting (page2) table1 ####
+  output$conference.report <- renderTable(
+  unreported.long %>%
+    filter(`total.joined$INSTNM` %in% get(input$conference.picker)) %>%
+    filter(crime == input$crime.picker) %>%
+    filter(location == input$location.picker) %>%
+    filter(year == input$year.picker) %>%
+    select(`total.joined$INSTNM`, `Reporting Categories Missing`)
+  )
+  
+  #### Reporting (page2) table2 ####
+  output$conference.totals <- renderTable(
+  unreported.totals %>%
+    filter(`total.joined$INSTNM` %in% get(input$conference.picker))
+  )
+  
+  #### Comparison (page3) graph1 ####
+  output$crimes_over_time <- renderPlot(
+    total.long %>%
+      #filter(INSTNM %in% c("Middlebury College", "Williams College")) %>%
+      #filter(location == "On Campus") %>%
+      #filter(crime == "Fondling") %>%
+      filter(INSTNM %in% c(input$school1, input$school2)) %>%
+      filter(location == input$loc) %>%
+      filter(crime == input$offense) %>%
+      ggplot(aes(x = as.numeric(year),
+                 y = `reported cases`,
+                 fill = INSTNM)) +
+      geom_bar(stat = "identity",
+               position = "dodge") +
+      theme_bw() + 
+      labs(title = "Reported Cases over Time",
+           subtitle = "2016-2018",
+           x = "Year",
+           y = "Reported Cases") +
+      theme(plot.title = element_text(hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5)) +
+      scale_fill_manual(name = "School", values = c("dodgerblue3", "orange"))
+  )
+  #### Comparison (page3) graph2 #### 
+  output$comparison_rates <- renderPlot(
+    metrics.long %>%
+      filter(INSTNM %in% c(input$school1, input$school2)) %>%
+      ggplot(aes(x = INSTNM,
+                 y = rate,
+                 fill = crime)) +
+      geom_bar(stat = "identity",
+               position = "dodge") +
+      theme_bw() + 
+      labs(title = "Cases per 100 Students",
+           subtitle = "2016-2018",
+           x = "School",
+           y = "Cases per Total Population (%)") +
+      theme(plot.title = element_text(hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5)) +
+      scale_fill_manual(name = "Crime", values = c("dodgerblue3", "orange", "plum1", "olivedrab3"))
+    # + coord_flip()
+  )
+}
+
+shinyApp(ui = ui, server = server)
