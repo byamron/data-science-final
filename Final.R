@@ -400,8 +400,7 @@ heat.map.na.values <- total.na.scores.long %>%
             location, 
             frequency,
             name = "number")  %>%
-  mutate(proportion = number/n) #%>%
-#filter(frequency == 1)
+  mutate(proportion = number/n)
 
 #add placeholder NA values for columns with missing info
 fix.na <- tibble(`total.joined.na.narrative$Sector_desc` = c("Private nonprofit, 2-year",
@@ -423,11 +422,11 @@ heat.map.full <- full_join(heat.map.na.values, fix.na, by = c("total.joined.na.n
                                                               "location",
                                                               "frequency",
                                                               "number",
-                                                              "proportion")) %>%
-  filter(frequency == 2)
+                                                              "proportion"))
 
 ### graphs to show missing values
 heat.map.full %>%
+  filter(frequency == 2) %>%
   ggplot(aes(x = factor(location),
              y = factor(`total.joined.na.narrative$Sector_desc`))) +
   geom_tile(aes(fill = proportion)) +
@@ -495,7 +494,7 @@ unreported.list3 <- unreported.list2 %>%
             missing.vawa.off18 = sum(DOMEST18.ON, STALK18.ON, DATING18.ON))
 
 #create lists of schools to filter by
-nescacs <- c("Middlebury College", 
+NESCAC <- c("Middlebury College", 
              "Amherst College", 
              "Bates College", 
              "Bowdoin College", 
@@ -506,7 +505,7 @@ nescacs <- c("Middlebury College",
              "Williams College",
              "Colby College")
 
-ivies <- c("Brown University",
+IvyLeague <- c("Brown University",
            "Columbia University in the City of New York",
            "Cornell University",
            "Dartmouth College",
@@ -515,7 +514,7 @@ ivies <- c("Brown University",
            "Princeton University",
            "Yale University")
 
-big10 <- c("Indiana University-Bloomington",
+Big10 <- c("Indiana University-Bloomington",
            "University of Maryland-College Park",
            "University of Michigan-Ann Arbor",
            "Michigan State University",
@@ -534,6 +533,25 @@ unreported.list3 %>%
   filter(`total.joined$INSTNM` %in% big10) %>%
   view()
 
+unreported.long <- unreported.list3 %>%
+  pivot_longer(-`total.joined$INSTNM`,
+               names_to = "crime.details",
+               values_to = "Reporting Categories Missing") %>%
+  mutate(location = ifelse(str_detect(crime.details, ".on"),
+                           "On Campus",
+                           ifelse(str_detect(crime.details, ".off"),
+                                  "Off Campus",
+                                  "Residence Hall"))) %>%
+  mutate(crime = ifelse(str_detect(crime.details, "sex.offenses"),
+                        "Sex Offenses",
+                       "VAWA")) %>%
+  mutate(year = ifelse(str_detect(crime.details, "16"),
+                       "2016",
+                       ifelse(str_detect(crime.details, "17"),
+                              "2017", "2018")))
 
+unreported.totals <- unreported.long %>%
+  group_by(`total.joined$INSTNM`) %>%
+  summarize(Total.Reports.Missing = sum(`Reporting Categories Missing`))
   
 
