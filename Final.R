@@ -185,7 +185,7 @@ total.joined.replaced.na %>%
   view()
 
 
-#new code 5/20/21
+#new code 5/20/21 ###
 
 #reading in shape file 
 colleges.points.shape <- st_read("Colleges_and_Universities.shp")
@@ -205,20 +205,62 @@ ggplot() +
 #read in geojson file
 college.shapes <- geojson_read("Colleges_and_Universities.geojson",
              what = "sp")
+link <- "https://studentaid.gov/data-center/school/clery-act-reports"
+link %>%
+  read_html() %>%
+  html_nodes("h3") %>%
+  html_text() %>%
+  view()
 
-colleges.shapes.copy <- college.shapes
-colleges.shapes.copy@data <- college.shapes@data %>% filter(NAME == "MIDDLEBURY COLLEGE")
+#### RSelenium ###
+#Download java development kit
+install.packages("RSelenium")
+library(RSelenium)
+#set up remote server using remoteServer function
+#call it r
+test <- rsDriver(port = 4444L,
+                 browser = "firefox")
+
+r <- remoteDriver(browserName = "firefox",
+                  port = 4444L)
+r$open()
+r$navigate(link)
+# test.h3 <- r$findElements(using = "tag name","h3")
+# 
+# test.h3.2 <- test.h3$getElements()
+# 
+source <- r$getPageSource()
+
+source.h3 <- source %>%
+  unlist() %>%
+  read_html() %>%
+  html_nodes("h3") %>%
+  html_text() %>% as.data.frame()
+
+write_csv(source.h3, "report.names.csv")
+
+### programming the leaflet ### 
+###this is basically all the information we need for making our leaflet###
+library("readxl")
+college.report.links <- read_excel("colleges.reports.xlsx")
+college.report.links.edited <- college.report.links %>% mutate(capital.college = str_to_upper(NAME))
+
+###check what schools don't have coordinates
+college.report.links.edited %>% anti_join(college.shapes@data, by = c("capital.college" = "NAME"))
 
 
-colleges.shapes.copy %>%
+college.shapes.copy <- college.shapes
+college.shapes.copy@data <- college.shapes@data %>% left_join(college.report.links.edited, by = c("NAME" = "capital.college"))
+college.shapes.copy@data <- college.shapes.copy@data %>% filter(!is.na(NAME.y))
+library(leaflet)
+library(tidyverse)
+college.shapes.copy %>%
   leaflet() %>%
   addTiles() %>%
-  addMarkers()
-
-
-college.shapes %>%
-  leaflet() %>%
-  addTiles() %>%
-  addMarkers()
-
-
+  addMarkers(lat = ~LATITUDE, 
+             lng = ~LONGITUDE,
+             label = ~NAME,
+             popup = ~paste("Year:",Year, "<br>",
+                            "<a href =\"",Hyperlink,"\", target=\"_blank\">",`Hyperlink name`,"</a>"),
+             clusterOptions = markerClusterOptions())
+  
