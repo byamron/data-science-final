@@ -429,12 +429,18 @@ unreported.list3 <- unreported.list2 %>%
             missing.sex.offenses16.off = sum(RAPE16.OFF, STATR16.OFF, FONDL16.OFF),
             missing.sex.offenses17.off = sum(RAPE17.OFF, STATR17.OFF, FONDL17.OFF),
             missing.sex.offenses18.off = sum(RAPE18.OFF, STATR18.OFF, FONDL18.OFF),
+            missing.sex.offenses.16.res = sum(RAPE16, STATR16, FONDL16),
+            missing.sex.offenses.17.res = sum(RAPE17, STATR17, FONDL17),
+            missing.sex.offenses.18.res = sum(RAPE18, STATR18, FONDL18),
             missing.vawa.on16 = sum(DOMEST16.ON, STALK16.ON, DATING16.ON),
             missing.vawa.on17 = sum(DOMEST17.ON, STALK17.ON, DATING17.ON),
             missing.vawa.on18 = sum(DOMEST18.ON, STALK18.ON, DATING18.ON),
             missing.vawa.off16 = sum(DOMEST16.ON, STALK16.ON, DATING16.ON),
             missing.vawa.off17 = sum(DOMEST17.ON, STALK17.ON, DATING17.ON),
-            missing.vawa.off18 = sum(DOMEST18.ON, STALK18.ON, DATING18.ON))
+            missing.vawa.off18 = sum(DOMEST18.ON, STALK18.ON, DATING18.ON),
+            missing.vawa.res16 = sum(DOMEST16, STALK16, DATING16),
+            missing.vawa.res17 = sum(DOMEST17, STALK17, DATING17),
+            missing.vawa.res18 = sum(DOMEST18, STALK18, DATING18))
 
 #create lists of schools to filter by
 NESCAC <- c("Middlebury College", 
@@ -479,21 +485,39 @@ unreported.long <- unreported.list3 %>%
                values_to = "Reporting Categories Missing") %>%
   mutate(location = ifelse(str_detect(crime.details, ".on"),
                            "On Campus",
-                           ifelse(str_detect(crime.details, ".off"),
-                                  "Off Campus",
-                                  "Residence Hall"))) %>%
+                           ifelse(str_detect(crime.details, ".res"),
+                                  "Residence Hall",
+                                  "Off Campus"))) %>%
   mutate(crime = ifelse(str_detect(crime.details, "sex.offenses"),
                         "Sex Offenses",
                         "VAWA")) %>%
   mutate(year = ifelse(str_detect(crime.details, "16"),
                        "2016",
                        ifelse(str_detect(crime.details, "17"),
-                              "2017", "2018")))
+                              "2017", "2018"))) %>%
+  mutate(Institution = `total.joined$INSTNM`)
+  
+
 
 #calculate total missing reports by schools in table
 unreported.totals <- unreported.long %>%
-  group_by(`total.joined$INSTNM`) %>%
-  summarize(Total.Reports.Missing = sum(`Reporting Categories Missing`))
+  group_by(Institution) %>%
+  summarize(`Total Reports Missing` = sum(`Reporting Categories Missing`))
+
+
+library(shiny)
+library("readxl")
+
+college.shapes <- geojson_read("Colleges_and_Universities.geojson",
+                               what = "sp")
+college.report.links <- read_excel("colleges.reports.xlsx")
+college.report.links.edited <- college.report.links %>% mutate(capital.college = str_to_upper(NAME))
+college.report.links.edited %>% anti_join(college.shapes@data, by = c("capital.college" = "NAME"))
+college.shapes.copy <- college.shapes
+college.shapes.copy@data <- college.shapes@data %>% left_join(college.report.links.edited, by = c("NAME" = "capital.college"))
+college.shapes.copy@data <- college.shapes.copy@data %>% filter(!is.na(NAME.y))
+library(leaflet)
+library(tidyverse)
 
 ############################## SHINY APP ##############################
 
@@ -560,8 +584,19 @@ ui <- navbarPage(
                                              choices = c(unique(total.long$crime)))), 
                       plotOutput("crimes_over_time"),
                       plotOutput("comparison_rates")
-             )
-    )
+             ),
+    
+    tabPanel("CLERY Violation Reports since 2008",
+                          p("CLERY violations can occur on college campuses for a variety of reasons.
+                            Most often, reviews are done on colleges when a complaint is received,
+                            when there is some event reported by the media, when an independent party does a review, or
+                            through a review selection processs. Below are mapped all the colleges that have had reports since 
+                            2008. There are three colleges, Arlington Medical Institute, Plaza Beauty School, and Wards Corner Beauty Academy
+                            that do not have locations here but have had CLERY reports. If you click on each school, you can connect to a link
+                            with the US Department of Education's review determination or fine letter. Schools that have multiple reports will be shown, but 
+                            schools that do not have multiple reports are displayed as NA values. This data was taken from the Federal Student Aid government website."),
+                          leafletOutput(outputId = "leaflet")))
+    
 
 # Define server logic
 server <- function(input, output) {
@@ -585,24 +620,24 @@ server <- function(input, output) {
                                 "Residential Hall\nVAWA Crimes")) +
     xlab('Location and Category of Crime') +
     ylab('Type of School') +
-    ggtitle(label = "Proportion of Schools with Missing Data for n Years, by Type") +
+    ggtitle(label = paste("Proportion of Schools with Missing Data for",input$numberofyears, "Years, by Type")) +
     theme(plot.title = element_text(hjust = 0.5))
   )
   
   #### Reporting (page2) table1 ####
   output$conference.report <- renderTable(
   unreported.long %>%
-    filter(`total.joined$INSTNM` %in% get(input$conference.picker)) %>%
+    filter(`Institution` %in% get(input$conference.picker)) %>%
     filter(crime == input$crime.picker) %>%
     filter(location == input$location.picker) %>%
     filter(year == input$year.picker) %>%
-    select(`total.joined$INSTNM`, `Reporting Categories Missing`)
+    select(Institution, `Reporting Categories Missing`)
   )
   
   #### Reporting (page2) table2 ####
   output$conference.totals <- renderTable(
   unreported.totals %>%
-    filter(`total.joined$INSTNM` %in% get(input$conference.picker))
+    filter(Institution %in% get(input$conference.picker))
   )
   
   #### Comparison (page3) graph1 ####
@@ -646,6 +681,18 @@ server <- function(input, output) {
             plot.subtitle = element_text(hjust = 0.5)) +
       scale_fill_manual(name = "Crime", values = c("dodgerblue3", "orange", "plum1", "olivedrab3"))
     # + coord_flip()
+  )
+  
+  output$leaflet <- renderLeaflet(
+    college.shapes.copy %>%
+      leaflet() %>%
+      addTiles() %>%
+      addMarkers(lat = ~LATITUDE, 
+                 lng = ~LONGITUDE,
+                 label = ~NAME,
+                 popup =  ~paste("Year:",Year, "<br>", "<a href =\"",Hyperlink,"\", target=\"_blank\">",`Hyperlink name`,"</a>",
+                                 "<br>", "Year:",Year_2, "<br>", "<a href =\"",Hyperlink_2,"\", target=\"_blank\">",`Hyperlink_name_2`,"</a>"),
+                 clusterOptions = markerClusterOptions())
   )
 }
 
