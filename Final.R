@@ -244,7 +244,7 @@ write_csv(source.h3, "report.names.csv")
 library("readxl")
 college.report.links <- read_excel("colleges.reports.xlsx")
 college.report.links.edited <- college.report.links %>% mutate(capital.college = str_to_upper(NAME))
-
+  
 ###check what schools don't have coordinates
 college.report.links.edited %>% anti_join(college.shapes@data, by = c("capital.college" = "NAME"))
 
@@ -254,13 +254,14 @@ college.shapes.copy@data <- college.shapes@data %>% left_join(college.report.lin
 college.shapes.copy@data <- college.shapes.copy@data %>% filter(!is.na(NAME.y))
 library(leaflet)
 library(tidyverse)
+
+
 college.shapes.copy %>%
   leaflet() %>%
   addTiles() %>%
   addMarkers(lat = ~LATITUDE, 
              lng = ~LONGITUDE,
              label = ~NAME,
-             popup = ~paste("Year:",Year, "<br>",
-                            "<a href =\"",Hyperlink,"\", target=\"_blank\">",`Hyperlink name`,"</a>"),
+             popup =  ~paste("Year:",Year, "<br>", "<a href =\"",Hyperlink,"\", target=\"_blank\">",`Hyperlink name`,"</a>"),
              clusterOptions = markerClusterOptions())
   
