@@ -528,7 +528,26 @@ ui <- navbarPage(
              h3("Math 216 Final Project", align = "center"),
              h3("Creators: Divya Gudur, Ben Yamron, Selin Everett", align = "center"),
              h4(em("We have neither given nor received unauthorized aid on this assignment"),  align = "center")),
+    
+    tabPanel("Overview",
+             h4("Introduction"),
+             h5("A key value of the CLERY Act is transparency, and an integral part of this transparency are the clear CLERY Geographies that the act lays out for reporting. CLERY geographies are specific locations at a university where a sexual assault crime occurred, separated into on-campus, off-campus, residential halls, reported to local police, and having occurred in public. While there is information on the number of cases at various geographies, different schools have different reporting requirements on which locations qualify for reporting.It is important for students to better understand which locations qualify for reporting at their school, and which don’t."),
              
+             h4("How we collected our Data"),
+             h5("The CLERY Act, since it was enacted in 1990, requires every university and college to report to the U.S. Department of Education their number of cases of criminal offenses each year. Therefore we chose the dataset provided by this institution to conduct our analyses and visualizations on. Although this data is the most comprehensive dataset currently available on criminal offenses on college campuses, there is no macro-level information on what locations fail to report for. We wanted to fill this unmet need and also allow parents and potential college students to better understand the prevalence of crime, specifically sexual assault crimes, at schools they were interested or planning on attending."),
+                
+                h4("Our Research Goals:"),
+                h5("We had 3 Overarching Research Questions:"),
+                h5("1. How much do sexual assault reporting statistics vary across U.S. colleges and universities?"),
+                h5("2: How do different types of schools (e.g. public vs. private, NESCAC vs. Big 10) compare?"),
+                h5("3: How do issues of underreporting and a lack of reporting play into the data? Are there visible trends related to reporting itself?"),
+                
+                h4("Limitations"),
+                h5("One of the limitations was that we could not capture the complete picture with regards to underreporting assault statistics. We made the assumption that all NA values on a campus are missing even if a school was able to report for a location, when in reality, a campus might not have that location. This could be especially evident with regards to missing values for residential halls, given that some campuses don’t have residential living so would not report those numbers. For these types of schools, we would over-estimate the amount of underreporting."),
+                h5("Another limitation was that trying to find the main campus institution name was difficult because we were unfamiliar with many of the 11,000 total universities in our dataset. To get around this, we subsetted the dataset into conferences that we were familar enough with to choose the correct name for its main campus (Ex: University of Maryland - College Park)")
+                
+             ),
+    
     tabPanel("Schools' Reporting Levels",
              # selectizeInput(inputId = "reportinglevels",
              #             label = "Choose a school",
